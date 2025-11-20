@@ -240,10 +240,39 @@ if df is not None and not df.empty:
     df.columns = ['Close']
     df = df.dropna()
 
+    # 1. 計算時間範圍
+    # 我們預設讓圖表顯示「最近 1 年」，這樣才不會一打開就看到 30 年擠在一起
+    last_date = df.index[-1]
+    first_date = last_date - pd.Timedelta(days=365)
+
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='收盤價'))
-    fig.update_layout(title=f"{stock_ticker} 歷史股價", xaxis_rangeslider_visible=True, height=500)
-    st.plotly_chart(fig, use_container_width=True)
+    
+    fig.update_layout(
+        title=f"{stock_ticker} 歷史股價",
+        xaxis_title="日期",
+        yaxis_title="股價",
+        dragmode='pan', # 手機與滑鼠皆為平移模式
+        height=500,
+        
+        # 2. 關鍵修正：強制設定 X 軸範圍 (Range)
+        xaxis=dict(
+            range=[first_date, last_date], # <--- 這裡鎖定：起點是1年前，終點是最新資料
+            rangeslider=dict(visible=True), # 下方保留時間拉桿
+            type="date"
+        )
+    )
+    
+    # 3. 啟用滾輪縮放 (Scroll Zoom)
+    st.plotly_chart(
+        fig, 
+        use_container_width=True, 
+        config={
+            'scrollZoom': True,       # 啟用滾輪/雙指縮放
+            'displayModeBar': True,   # 顯示工具列
+            'displaylogo': False      # 隱藏 logo
+        }
+    )
     
     training_limit = 1250 
     df_for_training = df.iloc[-training_limit:] if len(df) > training_limit else df
